@@ -20,7 +20,7 @@ class BigNumberFormatterTest extends TestCase
      * 
      * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         parent::setUp();
         $this->formatter = new BigNumberFormatter;

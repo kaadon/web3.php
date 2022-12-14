@@ -9,31 +9,26 @@
  * @license MIT
  */
 
-namespace Web3\Methods\Personal;
+namespace Web3\Methods\Eth;
 
+use InvalidArgumentException;
 use Web3\Methods\EthMethod;
-use Web3\Validators\AddressValidator;
-use Web3\Formatters\AddressFormatter;
 
-class LockAccount extends EthMethod
+class GetCompilers extends EthMethod
 {
     /**
      * validators
      * 
      * @var array
      */
-    protected $validators = [
-        AddressValidator::class
-    ];
+    protected $validators = [];
 
     /**
      * inputFormatters
      * 
      * @var array
      */
-    protected $inputFormatters = [
-        AddressFormatter::class
-    ];
+    protected $inputFormatters = [];
 
     /**
      * outputFormatters
@@ -61,4 +56,3 @@ class LockAccount extends EthMethod
     //     parent::__construct($method, $arguments);
     // }
 }
-

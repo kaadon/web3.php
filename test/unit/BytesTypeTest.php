@@ -53,7 +53,7 @@ class BytesTypeTest extends TestCase
      * 
      * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         parent::setUp();
         $this->solidityType = new Bytes;

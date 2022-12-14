@@ -47,7 +47,7 @@ class AddressTypeTest extends TestCase
      * 
      * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         parent::setUp();
         $this->solidityType = new Address;

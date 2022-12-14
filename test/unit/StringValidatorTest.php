@@ -19,7 +19,7 @@ class StringValidatorTest extends TestCase
      * 
      * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         parent::setUp();
         $this->validator = new StringValidator;

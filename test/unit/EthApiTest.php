@@ -21,7 +21,7 @@ class EthApiTest extends TestCase
      * 
      * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         parent::setUp();
 
@@ -439,7 +439,7 @@ class EthApiTest extends TestCase
             if ($err !== null) {
                 return $this->assertTrue($err !== null);
             }
-            // weird behavior, see https://github.com/web3p/web3.php/issues/16
+            // weired behavior, see https://github.com/sc0Vu/web3.php/issues/16
             $this->assertTrue($block !== null);
         });
     }
@@ -457,7 +457,7 @@ class EthApiTest extends TestCase
             if ($err !== null) {
                 return $this->assertTrue($err !== null);
             }
-            $this->assertTrue($transaction == null);
+            $this->assertTrue($transaction !== null);
         });
     }
 
@@ -474,7 +474,7 @@ class EthApiTest extends TestCase
             if ($err !== null) {
                 return $this->assertTrue($err !== null);
             }
-            $this->assertTrue($transaction == null);
+            $this->assertTrue($transaction !== null);
         });
     }
 
@@ -508,7 +508,7 @@ class EthApiTest extends TestCase
             if ($err !== null) {
                 return $this->assertTrue($err !== null);
             }
-            $this->assertTrue($transaction == null);
+            $this->assertTrue($transaction !== null);
         });
     }
 
@@ -543,6 +543,24 @@ class EthApiTest extends TestCase
                 return $this->assertTrue($err !== null);
             }
             $this->assertTrue($uncle !== null);
+        });
+    }
+
+    /**
+     * testGetCompilers
+     * 
+     * @return void
+     */    
+    public function testGetCompilers()
+    {
+        $eth = $this->eth;
+
+        $eth->getCompilers(function ($err, $compilers) {
+            if ($err !== null) {
+                return $this->assertTrue($err !== null);
+            }
+            $this->assertTrue(is_array($compilers));
+            $this->assertEquals($compilers[0], 'solidity');
         });
     }
 
@@ -629,7 +647,7 @@ class EthApiTest extends TestCase
     {
         $eth = $this->eth;
 
-        $eth->newBlockFilter(function ($err, $filter) {
+        $eth->newBlockFilter('0x01', function ($err, $filter) {
             if ($err !== null) {
                 // infura banned us to new block filter
                 return $this->assertTrue($err !== null);

@@ -21,7 +21,7 @@ class ShhApiTest extends TestCase
      * 
      * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         parent::setUp();
 

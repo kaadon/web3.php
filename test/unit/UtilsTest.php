@@ -7,7 +7,6 @@ use stdClass;
 use Test\TestCase;
 use phpseclib\Math\BigInteger as BigNumber;
 use Web3\Utils;
-use Web3\Contract;
 
 class UtilsTest extends TestCase
 {
@@ -54,90 +53,11 @@ class UtilsTest extends TestCase
     }';
 
     /**
-     * testIssue112Json
-     * see: https://github.com/web3p/web3.php/issues/112
-     * 
-     * @var string
-     */
-    protected $testIssue112Json = '[
-        {
-          "constant": true,
-          "inputs": [],
-          "name": "name",
-          "outputs": [
-            {
-              "name": "",
-              "type": "string"
-            }
-          ],
-          "payable": false,
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "constant": true,
-          "inputs": [],
-          "name": "decimals",
-          "outputs": [
-            {
-              "name": "",
-              "type": "uint256"
-            }
-          ],
-          "payable": false,
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "constant": true,
-          "inputs": [
-            {
-              "name": "tokenOwner",
-              "type": "address"
-            }
-          ],
-          "name": "balanceOf",
-          "outputs": [
-            {
-              "name": "balance",
-              "type": "uint256"
-            }
-          ],
-          "payable": false,
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "constant": false,
-          "inputs": [
-            {
-              "name": "to",
-              "type": "address"
-            },
-            {
-              "name": "tokens",
-              "type": "uint256"
-            }
-          ],
-          "name": "transfer",
-          "outputs": [
-            {
-              "name": "success",
-              "type": "bool"
-            }
-          ],
-          "payable": false,
-          "stateMutability": "nonpayable",
-          "type": "function"
-        }
-    ]';
-
-    /**
      * setUp
      * 
      * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         parent::setUp();
     }
@@ -249,7 +169,7 @@ class UtilsTest extends TestCase
 
     /**
      * testIsAddressChecksum
-     *
+     * 
      * @return void
      */
     public function testIsAddressChecksum()
@@ -292,35 +212,8 @@ class UtilsTest extends TestCase
     }
 
     /**
-     * testToChecksumAddress
-     *
-     * @return void
-     */
-    public function testToChecksumAddress()
-    {
-        $checksumAddressTest = [
-            // All caps
-            '0x52908400098527886E0F7030069857D2E4169EE7',
-            '0x8617E340B3D01FA5F11F306F4090FD50E238070D',
-            // All Lower
-            '0xde709f2102306220921060314715629080e2fb77',
-            '0x27b1fdb04752bbc536007a920d24acb045561c26',
-            // Normal
-            '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
-            '0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359',
-            '0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB',
-            '0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb'
-        ];
-
-        for ($i=0; $i<count($checksumAddressTest); $i++) {
-            $checksumAddress = Utils::toChecksumAddress(strtolower($checksumAddressTest[$i]));
-            $this->assertEquals($checksumAddressTest[$i], $checksumAddress);
-        }
-    }
-
-    /**
      * testStripZero
-     *
+     * 
      * @return void
      */
     public function testStripZero()
@@ -359,58 +252,82 @@ class UtilsTest extends TestCase
     public function testToWei()
     {
         $bn = Utils::toWei('0x1', 'wei');
-        $this->assertEquals('1', $bn->toString());
+        $this->assertEquals($bn->toString(), '1');
 
         $bn = Utils::toWei('18', 'wei');
-        $this->assertEquals('18', $bn->toString());
+        $this->assertEquals($bn->toString(), '18');
+
+        $bn = Utils::toWei(1, 'wei');
+        $this->assertEquals($bn->toString(), '1');
+
+        $bn = Utils::toWei(0x11, 'wei');
+        $this->assertEquals($bn->toString(), '17');
 
         $bn = Utils::toWei('1', 'ether');
-        $this->assertEquals('1000000000000000000', $bn->toString());
+        $this->assertEquals($bn->toString(), '1000000000000000000');
 
         $bn = Utils::toWei('0x5218', 'wei');
-        $this->assertEquals('21016', $bn->toString());
-
-        $bn = Utils::toWei('0.000012', 'ether');
-        $this->assertEquals('12000000000000', $bn->toString());
+        $this->assertEquals($bn->toString(), '21016');
 
         $bn = Utils::toWei('0.1', 'ether');
-        $this->assertEquals('100000000000000000', $bn->toString());
+        $this->assertEquals($bn->toString(), '100000000000000000');
 
         $bn = Utils::toWei('1.69', 'ether');
-        $this->assertEquals('1690000000000000000', $bn->toString());
+        $this->assertEquals($bn->toString(), '1690000000000000000');
 
         $bn = Utils::toWei('0.01', 'ether');
-        $this->assertEquals('10000000000000000', $bn->toString());
+        $this->assertEquals($bn->toString(), '10000000000000000');
 
         $bn = Utils::toWei('0.002', 'ether');
-        $this->assertEquals('2000000000000000', $bn->toString());
+        $this->assertEquals($bn->toString(), '2000000000000000');
+
+        $bn = Utils::toWei(0.1, 'ether');
+        $this->assertEquals($bn->toString(), '100000000000000000');
+
+        $bn = Utils::toWei(1.69, 'ether');
+        $this->assertEquals($bn->toString(), '1690000000000000000');
+
+        $bn = Utils::toWei(0.01, 'ether');
+        $this->assertEquals($bn->toString(), '10000000000000000');
+
+        $bn = Utils::toWei(0.002, 'ether');
+        $this->assertEquals($bn->toString(), '2000000000000000');
 
         $bn = Utils::toWei('-0.1', 'ether');
-        $this->assertEquals('-100000000000000000', $bn->toString());
+        $this->assertEquals($bn->toString(), '-100000000000000000');
 
         $bn = Utils::toWei('-1.69', 'ether');
-        $this->assertEquals('-1690000000000000000', $bn->toString());
+        $this->assertEquals($bn->toString(), '-1690000000000000000');
+
+        $bn = Utils::toWei(-0.1, 'ether');
+        $this->assertEquals($bn->toString(), '-100000000000000000');
+
+        $bn = Utils::toWei(-1.69, 'ether');
+        $this->assertEquals($bn->toString(), '-1690000000000000000');
 
         $bn = Utils::toWei('', 'ether');
-        $this->assertEquals('0', $bn->toString());
+        $this->assertEquals($bn->toString(), '0');
+
+        $bn = Utils::toWei(-1.697, 'kwei');
+        $this->assertEquals($bn->toString(), '-1697');
 
         try {
             $bn = Utils::toWei('0x5218', new stdClass);
         } catch (InvalidArgumentException $e) {
-            $this->assertEquals('toWei unit must be string.', $e->getMessage());
+            $this->assertTrue($e !== null);
         }
 
         try {
             $bn = Utils::toWei('0x5218', 'test');
         } catch (InvalidArgumentException $e) {
-            $this->assertEquals('toWei doesn\'t support test unit.', $e->getMessage());
+            $this->assertTrue($e !== null);
         }
 
         try {
             // out of limit
             $bn = Utils::toWei(-1.6977, 'kwei');
         } catch (InvalidArgumentException $e) {
-            $this->assertEquals('toWei number must be string or bignumber.', $e->getMessage());
+            $this->assertTrue($e !== null);
         }
     }
 
@@ -430,6 +347,16 @@ class UtilsTest extends TestCase
 
         $this->assertEquals($bnq->toString(), '0');
         $this->assertEquals($bnr->toString(), '18');
+
+        list($bnq, $bnr) = Utils::toEther(1, 'wei');
+
+        $this->assertEquals($bnq->toString(), '0');
+        $this->assertEquals($bnr->toString(), '1');
+
+        list($bnq, $bnr) = Utils::toEther(0x11, 'wei');
+
+        $this->assertEquals($bnq->toString(), '0');
+        $this->assertEquals($bnr->toString(), '17');
 
         list($bnq, $bnr) = Utils::toEther('1', 'kether');
 
@@ -525,16 +452,39 @@ class UtilsTest extends TestCase
      */
     public function testJsonToArray()
     {
-        $decodedJson = json_decode($this->testJsonMethodString);
-        $jsonArray = Utils::jsonToArray($decodedJson);
-        $jsonAssoc = json_decode($this->testJsonMethodString, true);
-        $jsonArray2 = Utils::jsonToArray($jsonAssoc);
-        $this->assertEquals($jsonAssoc, $jsonArray);
-        $this->assertEquals($jsonAssoc, $jsonArray2);
+        $json = json_decode($this->testJsonMethodString);
+        $jsonArrayDepth1 = Utils::jsonToArray($json);
 
-        $jsonAssoc = json_decode($this->testIssue112Json, true);
-        $jsonArray = Utils::jsonToArray($jsonAssoc);
-        $this->assertEquals($jsonAssoc, $jsonArray);
+        $this->assertEquals($jsonArrayDepth1, (array) $json);
+
+        $jsonAssoc = json_decode($this->testJsonMethodString, true);
+        $jsonArrayDepth2 = Utils::jsonToArray($json, 2);
+
+        $this->assertEquals($jsonArrayDepth2, $jsonAssoc);
+
+        $jsonArrayDepth2 = Utils::jsonToArray($jsonArrayDepth1, 2);
+        $this->assertEquals($jsonArrayDepth2, $jsonAssoc);
+
+        $jsonArray = Utils::jsonToArray($this->testJsonMethodString);
+        $this->assertEquals($jsonArray, $jsonAssoc);
+
+        try {
+            $jsonArray = Utils::jsonToArray($json, 0);
+        } catch (InvalidArgumentException $e) {
+            $this->assertTrue($e !== null);
+        }
+
+        try {
+            $jsonArray = Utils::jsonToArray(mb_substr($this->testJsonMethodString, 0, 50), 1);
+        } catch (InvalidArgumentException $e) {
+            $this->assertTrue($e !== null);
+        }
+
+        try {
+            $jsonArray = Utils::jsonToArray(0, 1);
+        } catch (InvalidArgumentException $e) {
+            $this->assertTrue($e !== null);
+        }
     }
 
     /**

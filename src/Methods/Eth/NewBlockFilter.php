@@ -23,14 +23,18 @@ class NewBlockFilter extends EthMethod
      * 
      * @var array
      */
-    protected $validators = [];
+    protected $validators = [
+        QuantityValidator::class
+    ];
 
     /**
      * inputFormatters
      * 
      * @var array
      */
-    protected $inputFormatters = [];
+    protected $inputFormatters = [
+        QuantityFormatter::class
+    ];
 
     /**
      * outputFormatters

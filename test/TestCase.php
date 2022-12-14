@@ -37,8 +37,10 @@ class TestCase extends BaseTestCase
 
     /**
      * setUp
+     * 
+     * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         $web3 = new Web3($this->testHost);
         $this->web3 = $web3;
@@ -53,6 +55,8 @@ class TestCase extends BaseTestCase
 
     /**
      * tearDown
+     * 
+     * @return void
      */
-    public function tearDown(): void {}
+    public function tearDown() {}
 }

@@ -28,10 +28,8 @@ use Web3\Contracts\Types\Str;
 use Web3\Contracts\Types\Uinteger;
 use Web3\Validators\AddressValidator;
 use Web3\Validators\HexValidator;
-use Web3\Validators\StringValidator;
-use Web3\Validators\TagValidator;
-use Web3\Validators\QuantityValidator;
 use Web3\Formatters\AddressFormatter;
+use Web3\Validators\StringValidator;
 
 class Contract
 {
@@ -99,21 +97,13 @@ class Contract
     protected $ethabi;
 
     /**
-     * defaultBlock
-     *
-     * @var mixed
-     */
-    protected $defaultBlock;
-
-    /**
      * construct
      *
      * @param string|\Web3\Providers\Provider $provider
      * @param string|\stdClass|array $abi
-     * @param mixed $defaultBlock
      * @return void
      */
-    public function __construct($provider, $abi, $defaultBlock = 'latest')
+    public function __construct($provider, $abi)
     {
         if (is_string($provider) && (filter_var($provider, FILTER_VALIDATE_URL) !== false)) {
             // check the uri schema
@@ -125,21 +115,12 @@ class Contract
         } else if ($provider instanceof Provider) {
             $this->provider = $provider;
         }
+        $abi = Utils::jsonToArray($abi, 5);
 
-        $abiArray = [];
-        if (is_string($abi)) {
-            $abiArray = json_decode($abi, true);
-
-            if (JSON_ERROR_NONE !== json_last_error()) {
-                throw new InvalidArgumentException('abi decode error: ' . json_last_error_msg());
-            }
-        } else {
-            $abiArray = Utils::jsonToArray($abi);
-        }
-        foreach ($abiArray as $item) {
+        foreach ($abi as $item) {
             if (isset($item['type'])) {
                 if ($item['type'] === 'function') {
-                    $this->functions[] = $item;
+                    $this->functions[$item['name']] = $item;
                 } elseif ($item['type'] === 'constructor') {
                     $this->constructor = $item;
                 } elseif ($item['type'] === 'event') {
@@ -147,12 +128,7 @@ class Contract
                 }
             }
         }
-        if (TagValidator::validate($defaultBlock) || QuantityValidator::validate($defaultBlock)) {
-            $this->defaultBlock = $defaultBlock;
-        } else {
-            $this->$defaultBlock = 'latest';
-        }
-        $this->abi = $abiArray;
+        $this->abi = $abi;
         $this->eth = new Eth($this->provider);
         $this->ethabi = new Ethabi([
             'address' => new Address,
@@ -227,7 +203,7 @@ class Contract
 
     /**
      * setProvider
-     *
+     * 
      * @param \Web3\Providers\Provider $provider
      * @return $this
      */
@@ -240,34 +216,8 @@ class Contract
     }
 
     /**
-     * getDefaultBlock
-     * 
-     * @return string
-     */
-    public function getDefaultBlock()
-    {
-        return $this->defaultBlock;
-    }
-
-    /**
-     * setDefaultBlock
-     *
-     * @param mixed $defaultBlock
-     * @return $this
-     */
-    public function setDefaultBlock($defaultBlock)
-    {
-        if (TagValidator::validate($defaultBlock) || QuantityValidator::validate($defaultBlock)) {
-            $this->defaultBlock = $defaultBlock;
-        } else {
-            $this->$defaultBlock = 'latest';
-        }
-        return $this;
-    }
-
-    /**
      * getFunctions
-     *
+     * 
      * @return array
      */
     public function getFunctions()
@@ -277,7 +227,7 @@ class Contract
 
     /**
      * getEvents
-     *
+     * 
      * @return array
      */
     public function getEvents()
@@ -295,7 +245,7 @@ class Contract
 
     /**
      * getConstructor
-     *
+     * 
      * @return array
      */
     public function getConstructor()
@@ -305,7 +255,7 @@ class Contract
 
     /**
      * getAbi
-     *
+     * 
      * @return array
      */
     public function getAbi()
@@ -409,21 +359,12 @@ class Contract
         if (StringValidator::validate($abi) === false) {
             throw new InvalidArgumentException('Please make sure abi is valid.');
         }
-        $abiArray = [];
-        if (is_string($abi)) {
-            $abiArray = json_decode($abi, true);
+        $abi = Utils::jsonToArray($abi, 5);
 
-            if (JSON_ERROR_NONE !== json_last_error()) {
-                throw new InvalidArgumentException('abi decode error: ' . json_last_error_msg());
-            }
-        } else {
-            $abiArray = Utils::jsonToArray($abi);
-        }
-
-        foreach ($abiArray as $item) {
+        foreach ($abi as $item) {
             if (isset($item['type'])) {
                 if ($item['type'] === 'function') {
-                    $this->functions[] = $item;
+                    $this->functions[$item['name']] = $item;
                 } elseif ($item['type'] === 'constructor') {
                     $this->constructor = $item;
                 } elseif ($item['type'] === 'event') {
@@ -431,7 +372,7 @@ class Contract
                 }
             }
         }
-        $this->abi = $abiArray;
+        $this->abi = $abi;
 
         return $this;
     }
@@ -450,8 +391,7 @@ class Contract
             $arguments = func_get_args();
             $callback = array_pop($arguments);
 
-            $input_count = isset($constructor['inputs']) ? count($constructor['inputs']) : 0;
-            if (count($arguments) < $input_count) {
+            if (count($arguments) < count($constructor['inputs'])) {
                 throw new InvalidArgumentException('Please make sure you have put all constructor params and callback.');
             }
             if (is_callable($callback) !== true) {
@@ -460,7 +400,7 @@ class Contract
             if (!isset($this->bytecode)) {
                 throw new \InvalidArgumentException('Please call bytecode($bytecode) before new().');
             }
-            $params = array_splice($arguments, 0, $input_count);
+            $params = array_splice($arguments, 0, count($constructor['inputs']));
             $data = $this->ethabi->encodeParameters($constructor, $params);
             $transaction = [];
 
@@ -492,75 +432,26 @@ class Contract
             $method = array_splice($arguments, 0, 1)[0];
             $callback = array_pop($arguments);
 
-            if (!is_string($method)) {
-                throw new InvalidArgumentException('Please make sure the method is string.');
-            }
-
-            $functions = [];
-            foreach ($this->functions as $function) {
-                if ($function["name"] === $method) {
-                    $functions[] = $function;
-                }
-            };
-            if (count($functions) < 1) {
+            if (!is_string($method) || !isset($this->functions[$method])) {
                 throw new InvalidArgumentException('Please make sure the method exists.');
+            }
+            $function = $this->functions[$method];
+
+            if (count($arguments) < count($function['inputs'])) {
+                throw new InvalidArgumentException('Please make sure you have put all function params and callback.');
             }
             if (is_callable($callback) !== true) {
                 throw new \InvalidArgumentException('The last param must be callback function.');
             }
-
-            // check the last one in arguments is transaction object
-            $argsLen = count($arguments);
-            $transaction = [];
-            $hasTransaction = false;
-
-            if ($argsLen > 0) {
-                $transaction = $arguments[$argsLen - 1];
-            }
-            if (
-                isset($transaction["from"]) ||
-                isset($transaction["to"]) ||
-                isset($transaction["gas"]) ||
-                isset($transaction["gasPrice"]) ||
-                isset($transaction["value"]) ||
-                isset($transaction["data"]) ||
-                isset($transaction["nonce"])
-            ) {
-                $hasTransaction = true;
-            } else {
-                $transaction = [];
-            }
-
-            $params = [];
-            $data = "";
-            $functionName = "";
-            foreach ($functions as $function) {
-                if ($hasTransaction) {
-                    if ($argsLen - 1 !== count($function['inputs'])) {
-                        continue;
-                    } else {
-                        $paramsLen = $argsLen - 1;
-                    }
-                } else {
-                    if ($argsLen !== count($function['inputs'])) {
-                        continue;
-                    } else {
-                        $paramsLen = $argsLen;
-                    }
-                }
-                try {
-                    $params = array_splice($arguments, 0, $paramsLen);
-                    $data = $this->ethabi->encodeParameters($function, $params);
-                    $functionName = Utils::jsonMethodToString($function);
-                } catch (InvalidArgumentException $e) {
-                    continue;
-                }
-                break;
-            }
-            if (empty($data) || empty($functionName)) {
-                throw new InvalidArgumentException('Please make sure you have put all function params and callback.');
-            }
+            $params = array_splice($arguments, 0, count($function['inputs']));
+            $data = $this->ethabi->encodeParameters($function, $params);
+            $functionName = Utils::jsonMethodToString($function);
             $functionSignature = $this->ethabi->encodeFunctionSignature($functionName);
+            $transaction = [];
+
+            if (count($arguments) > 0) {
+                $transaction = $arguments[0];
+            }
             $transaction['to'] = $this->toAddress;
             $transaction['data'] = $functionSignature . Utils::stripZero($data);
 
@@ -576,7 +467,7 @@ class Contract
     /**
      * call
      * Call function method.
-     *
+     * 
      * @param mixed
      * @return void
      */
@@ -587,78 +478,30 @@ class Contract
             $method = array_splice($arguments, 0, 1)[0];
             $callback = array_pop($arguments);
 
-            if (!is_string($method)) {
-                throw new InvalidArgumentException('Please make sure the method is string.');
-            }
-
-            $functions = [];
-            foreach ($this->functions as $function) {
-                if ($function["name"] === $method) {
-                    $functions[] = $function;
-                }
-            };
-            if (count($functions) < 1) {
+            if (!is_string($method) || !isset($this->functions[$method])) {
                 throw new InvalidArgumentException('Please make sure the method exists.');
+            }
+            $function = $this->functions[$method];
+
+            if (count($arguments) < count($function['inputs'])) {
+                throw new InvalidArgumentException('Please make sure you have put all function params and callback.');
             }
             if (is_callable($callback) !== true) {
                 throw new \InvalidArgumentException('The last param must be callback function.');
             }
-
-            // check the arguments
-            $argsLen = count($arguments);
-            $transaction = [];
-            $defaultBlock = $this->defaultBlock;
-            $params = [];
-            $data = "";
-            $functionName = "";
-            foreach ($functions as $function) {
-                try {
-                    $paramsLen = count($function['inputs']);
-                    $params = array_slice($arguments, 0, $paramsLen);
-                    $data = $this->ethabi->encodeParameters($function, $params);
-                    $functionName = Utils::jsonMethodToString($function);
-                } catch (InvalidArgumentException $e) {
-                    continue;
-                }
-                break;
-            }
-            if (empty($data) || empty($functionName)) {
-                throw new InvalidArgumentException('Please make sure you have put all function params and callback.');
-            }
-            // remove arguments
-            array_splice($arguments, 0, $paramsLen);
-            $argsLen -= $paramsLen;
-
-            if ($argsLen > 1) {
-                $defaultBlock = $arguments[$argsLen - 1];
-                $transaction = $arguments[$argsLen - 2];
-            } else if ($argsLen > 0) {
-                if (is_array($arguments[$argsLen - 1])) {
-                    $transaction = $arguments[$argsLen - 1];
-                } else {
-                    $defaultBlock = $arguments[$argsLen - 1];
-                }
-            }
-            if (!TagValidator::validate($defaultBlock) && !QuantityValidator::validate($defaultBlock)) {
-                $defaultBlock = $this->defaultBlock;
-            }
-            if (
-                !is_array($transaction) &&
-                !isset($transaction["from"]) &&
-                !isset($transaction["to"]) &&
-                !isset($transaction["gas"]) &&
-                !isset($transaction["gasPrice"]) &&
-                !isset($transaction["value"]) &&
-                !isset($transaction["data"]) &&
-                !isset($transaction["nonce"])
-            ) {
-                $transaction = [];
-            }
+            $params = array_splice($arguments, 0, count($function['inputs']));
+            $data = $this->ethabi->encodeParameters($function, $params);
+            $functionName = Utils::jsonMethodToString($function);
             $functionSignature = $this->ethabi->encodeFunctionSignature($functionName);
+            $transaction = [];
+
+            if (count($arguments) > 0) {
+                $transaction = $arguments[0];
+            }
             $transaction['to'] = $this->toAddress;
             $transaction['data'] = $functionSignature . Utils::stripZero($data);
 
-            $this->eth->call($transaction, $defaultBlock, function ($err, $transaction) use ($callback, $function){
+            $this->eth->call($transaction, function ($err, $transaction) use ($callback, $function){
                 if ($err !== null) {
                     return call_user_func($callback, $err, null);
                 }
@@ -701,84 +544,36 @@ class Contract
                 if (count($arguments) > 0) {
                     $transaction = $arguments[0];
                 }
+                $transaction['to'] = '';
                 $transaction['data'] = '0x' . $this->bytecode . Utils::stripZero($data);
             } else {
                 $method = array_splice($arguments, 0, 1)[0];
 
-                if (!is_string($method)) {
-                    throw new InvalidArgumentException('Please make sure the method is string.');
+                if (!is_string($method) && !isset($this->functions[$method])) {
+                    throw new InvalidArgumentException('Please make sure the method is existed.');
                 }
-    
-                $functions = [];
-                foreach ($this->functions as $function) {
-                    if ($function["name"] === $method) {
-                        $functions[] = $function;
-                    }
-                };
-                if (count($functions) < 1) {
-                    throw new InvalidArgumentException('Please make sure the method exists.');
+                $function = $this->functions[$method];
+
+                if (count($arguments) < count($function['inputs'])) {
+                    throw new InvalidArgumentException('Please make sure you have put all function params and callback.');
                 }
                 if (is_callable($callback) !== true) {
                     throw new \InvalidArgumentException('The last param must be callback function.');
                 }
-    
-                // check the last one in arguments is transaction object
-                $argsLen = count($arguments);
-                $transaction = [];
-                $hasTransaction = false;
-
-                if ($argsLen > 0) {
-                    $transaction = $arguments[$argsLen - 1];
-                }
-                if (
-                    isset($transaction["from"]) ||
-                    isset($transaction["to"]) ||
-                    isset($transaction["gas"]) ||
-                    isset($transaction["gasPrice"]) ||
-                    isset($transaction["value"]) ||
-                    isset($transaction["data"]) ||
-                    isset($transaction["nonce"])
-                ) {
-                    $hasTransaction = true;
-                } else {
-                    $transaction = [];
-                }
-
-                $params = [];
-                $data = "";
-                $functionName = "";
-                foreach ($functions as $function) {
-                    if ($hasTransaction) {
-                        if ($argsLen - 1 !== count($function['inputs'])) {
-                            continue;
-                        } else {
-                            $paramsLen = $argsLen - 1;
-                        }
-                    } else {
-                        if ($argsLen !== count($function['inputs'])) {
-                            continue;
-                        } else {
-                            $paramsLen = $argsLen;
-                        }
-                    }
-                    try {
-                        $params = array_splice($arguments, 0, $paramsLen);
-                        $data = $this->ethabi->encodeParameters($function, $params);
-                        $functionName = Utils::jsonMethodToString($function);
-                    } catch (InvalidArgumentException $e) {
-                        continue;
-                    }
-                    break;
-                }
-                if (empty($data) || empty($functionName)) {
-                    throw new InvalidArgumentException('Please make sure you have put all function params and callback.');
-                }
+                $params = array_splice($arguments, 0, count($function['inputs']));
+                $data = $this->ethabi->encodeParameters($function, $params);
+                $functionName = Utils::jsonMethodToString($function);
                 $functionSignature = $this->ethabi->encodeFunctionSignature($functionName);
+                $transaction = [];
+
+                if (count($arguments) > 0) {
+                    $transaction = $arguments[0];
+                }
                 $transaction['to'] = $this->toAddress;
                 $transaction['data'] = $functionSignature . Utils::stripZero($data);
             }
 
-            $this->eth->estimateGas($transaction, function ($err, $gas) use ($callback) {
+            $this->eth->estimateGas($transaction, function ($err, $gas) use ($callback){
                 if ($err !== null) {
                     return call_user_func($callback, $err, null);
                 }
@@ -819,38 +614,17 @@ class Contract
             } else {
                 $method = array_splice($arguments, 0, 1)[0];
 
-                if (!is_string($method)) {
-                    throw new InvalidArgumentException('Please make sure the method is string.');
+                if (!is_string($method) && !isset($this->functions[$method])) {
+                    throw new InvalidArgumentException('Please make sure the method is existed.');
                 }
-    
-                $functions = [];
-                foreach ($this->functions as $function) {
-                    if ($function["name"] === $method) {
-                        $functions[] = $function;
-                    }
-                };
-                if (count($functions) < 1) {
-                    throw new InvalidArgumentException('Please make sure the method exists.');
-                }
-    
-                $params = $arguments;
-                $data = "";
-                $functionName = "";
-                foreach ($functions as $function) {
-                    if (count($arguments) !== count($function['inputs'])) {
-                        continue;
-                    }
-                    try {
-                        $data = $this->ethabi->encodeParameters($function, $params);
-                        $functionName = Utils::jsonMethodToString($function);
-                    } catch (InvalidArgumentException $e) {
-                        continue;
-                    }
-                    break;
-                }
-                if (empty($data) || empty($functionName)) {
+                $function = $this->functions[$method];
+
+                if (count($arguments) < count($function['inputs'])) {
                     throw new InvalidArgumentException('Please make sure you have put all function params and callback.');
                 }
+                $params = array_splice($arguments, 0, count($function['inputs']));
+                $data = $this->ethabi->encodeParameters($function, $params);
+                $functionName = Utils::jsonMethodToString($function);
                 $functionSignature = $this->ethabi->encodeFunctionSignature($functionName);
                 $functionData = Utils::stripZero($functionSignature) . Utils::stripZero($data);
             }

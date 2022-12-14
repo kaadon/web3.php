@@ -189,7 +189,7 @@ class Utils
 
     /**
      * isAddressChecksum
-     *
+     * 
      * @param string $value
      * @return bool
      */
@@ -210,31 +210,6 @@ class Utils
             }
         }
         return true;
-    }
-
-    /**
-     * toChecksumAddress
-     *
-     * @param string $value
-     * @return string
-     */
-    public static function toChecksumAddress($value)
-    {
-        if (!is_string($value)) {
-            throw new InvalidArgumentException('The value to toChecksumAddress function must be string.');
-        }
-        $value = self::stripZero(strtolower($value));
-        $hash = self::stripZero(self::sha3($value));
-        $ret = '0x';
-
-        for ($i = 0; $i < 40; $i++) {
-            if (intval($hash[$i], 16) >= 8) {
-                $ret .= strtoupper($value[$i]);
-            } else {
-                $ret .= $value[$i];
-            }
-        }
-        return $ret;
     }
 
     /**
@@ -291,15 +266,12 @@ class Utils
      * $wei = Utils::toWei('1', 'kwei'); 
      * $wei->toString(); // 1000
      * 
-     * @param BigNumber|string $number
+     * @param BigNumber|string|int $number
      * @param string $unit
      * @return \phpseclib\Math\BigInteger
      */
     public static function toWei($number, $unit)
     {
-        if (!is_string($number) && !($number instanceof BigNumber)) {
-            throw new InvalidArgumentException('toWei number must be string or bignumber.');
-        }
         $bn = self::toBn($number);
 
         if (!is_string($unit)) {
@@ -447,34 +419,52 @@ class Utils
     /**
      * jsonToArray
      * 
-     * @param stdClass|array $json
+     * @param stdClass|array|string $json
+     * @param int $depth
      * @return array
      */
-    public static function jsonToArray($json)
+    public static function jsonToArray($json, $depth=1)
     {
+        if (!is_int($depth) || $depth <= 0) {
+            throw new InvalidArgumentException('jsonToArray depth must be int and depth must bigger than 0.');
+        }
         if ($json instanceof stdClass) {
             $json = (array) $json;
             $typeName = [];
 
-            foreach ($json as $key => $param) {
-                if (is_array($param)) {
-                    foreach ($param as $subKey => $subParam) {
-                        $json[$key][$subKey] = self::jsonToArray($subParam);
+            if ($depth > 1) {
+                foreach ($json as $key => $param) {
+                    if (is_array($param)) {
+                        foreach ($param as $subKey => $subParam) {
+                            $json[$key][$subKey] = self::jsonToArray($subParam, $depth-1);
+                        }
+                    } elseif ($param instanceof stdClass) {
+                        $json[$key] = self::jsonToArray($param, $depth-1);
                     }
-                } elseif ($param instanceof stdClass) {
-                    $json[$key] = self::jsonToArray($param);
                 }
             }
+            return $json;
         } elseif (is_array($json)) {
-            foreach ($json as $key => $param) {
-                if (is_array($param)) {
-                    foreach ($param as $subKey => $subParam) {
-                        $json[$key][$subKey] = self::jsonToArray($subParam);
+            if ($depth > 1) {
+                foreach ($json as $key => $param) {
+                    if (is_array($param)) {
+                        foreach ($param as $subKey => $subParam) {
+                            $json[$key][$subKey] = self::jsonToArray($subParam, $depth-1);
+                        }
+                    } elseif ($param instanceof stdClass) {
+                        $json[$key] = self::jsonToArray($param, $depth-1);
                     }
-                } elseif ($param instanceof stdClass) {
-                    $json[$key] = self::jsonToArray($param);
                 }
             }
+        } elseif (is_string($json)) {
+            $json = json_decode($json, true);
+
+            if (JSON_ERROR_NONE !== json_last_error()) {
+                throw new InvalidArgumentException('json_decode error: ' . json_last_error_msg());
+            }
+            return $json;
+        } else {
+            throw new InvalidArgumentException('The json param to jsonToArray must be array or stdClass or string.');
         }
         return $json;
     }
@@ -529,7 +519,7 @@ class Utils
                 $number = str_replace('-', '', $number, $count);
                 $negative1 = new BigNumber(-1);
             }
-            if (self::isZeroPrefixed($number) || preg_match('/^[0-9a-f]+$/i', $number) === 1) {
+            if (self::isZeroPrefixed($number) || preg_match('/[a-f]+/', $number) === 1) {
                 $number = self::stripZero($number);
                 $bn = new BigNumber($number, 16);
             } elseif (empty($number)) {

@@ -19,7 +19,7 @@ class CallValidatorTest extends TestCase
      * 
      * @return void
      */
-    public function setUp(): void
+    public function setUp()
     {
         parent::setUp();
         $this->validator = new CallValidator;
